@@ -5,6 +5,8 @@ date: "Saturday, November 15, 2014"
 output: html_document
 ---
 
+Analysis published at [http://rpubs.com/MattNelson/42272](http://rpubs.com/MattNelson/42272)
+
 # Word Prediction
 
 Our goal is to build an algorithm that is capable of predicting the next word that a user wants to type into an application.Before we can design the algorithm, we need to understand the data that we have to work with.
@@ -12,7 +14,7 @@ Our goal is to build an algorithm that is capable of predicting the next word th
 ## General Observations
 The first step in understand the data is to look for general patterns in all written text. Combined data from Twitter, blogs, and news articles were used to perform the following analyses.
 
-```{r exploration}
+```{r echo=FALSE, results='hide', message=FALSE, error=FALSE, warning=FALSE}
 
 setwd("D:/Data Science/Capstone/Coursera-SwiftKey/final/en_US")
 library(tm)
@@ -29,7 +31,7 @@ close(conn)
 rm(conn)
 ```
 
-```{r}
+```{r echo=FALSE, results='hide', message=FALSE, error=FALSE, warning=FALSE}
 tweets <- length(twitter)
 blogEntries <- length(blogs)
 newsArticles <- length(news)
@@ -65,13 +67,13 @@ combinedSample <- tm_map(combinedSample, removePunctuation)
 punctCount <- totalCount - sum(nchar(combinedSample))
 combinedSample <- tm_map(combinedSample, stripWhitespace)
 whiteSpaceCount <- totalCount - (punctCount + sum(nchar(combinedSample)))
-combinedSample <- tm_map(combinedSample, content_transformer(tolower))
+combinedSample <- tm_map(combinedSample, tolower)
 combinedSample <- tm_map(combinedSample, removeNumbers)
 numberCount <- totalCount - (punctCount + whiteSpaceCount + sum(nchar(combinedSample)))
 tdm <- TermDocumentMatrix(twitterSample)
 ```
 
-```{r}
+```{r echo=FALSE, results='hide', message=FALSE, error=FALSE, warning=FALSE}
 ins <- inspect(tdm)
 FreqMat <- data.frame(apply(ins, 1, sum))
 rm(ins)
@@ -97,7 +99,7 @@ addTermFrequencies <- function(tdm, freqMatrix, start, end){
 }
 ```
 
-```{r}
+```{r echo=FALSE, results='hide', message=FALSE, error=FALSE, warning=FALSE}
 ins <- inspect(tdm[1:10000, ])
 triGramFreqMat <- data.frame(apply(ins, 1, sum))
 rm(ins)
