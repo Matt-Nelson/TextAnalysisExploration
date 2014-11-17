@@ -1,0 +1,263 @@
+---
+title: "Text Prediction - Exploratory Analysis"
+author: "Matt Nelson"
+date: "Saturday, November 15, 2014"
+output: html_document
+---
+
+# Word Prediction
+
+Our goal is to build an algorithm that is capable of predicting the next word that a user wants to type into an application.Before we can design the algorithm, we need to understand the data that we have to work with.
+
+## General Observations
+The first step in understand the data is to look for general patterns in all written text. Combined data from Twitter, blogs, and news articles were used to perform the following analyses.
+
+```{r exploration}
+
+setwd("D:/Data Science/Capstone/Coursera-SwiftKey/final/en_US")
+library(tm)
+library(RWeka)
+library(wordcloud)
+set.seed(1234)
+conn <- file("en_us.twitter.txt")
+twitter <- readLines(conn)
+conn <- file("en_us.blogs.txt")
+blogs <- readLines(conn)
+conn <- file("en_us.news.txt")
+news <- readLines(conn)
+close(conn)
+rm(conn)
+```
+
+```{r}
+tweets <- length(twitter)
+blogEntries <- length(blogs)
+newsArticles <- length(news)
+meanTweetLength <- mean(nchar(twitter))
+maxTweetLength <- max(nchar(twitter))
+minTweetLength <- min(nchar(twitter))
+sdTweetLength <- sd(nchar(twitter))
+meanArticleLength <- mean(nchar(news))
+maxArticleLength <- max(nchar(news))
+minArticleLength <- min(nchar(news))
+sdArticleLength <- sd(nchar(news))
+meanEntryLength <- mean(nchar(blogs))
+maxEntryLength <- max(nchar(blogs))
+minEntryLength <- min(nchar(blogs))
+sdEntryLength <- sd(nchar(blogs))
+sampleIndices <- 1:(length(twitter) / 400)
+sampleIndices <- (sampleIndices * 400) + 1
+twitter <- twitter[sampleIndices]
+sampleIndices <- 1:(length(news) / 40)
+sampleIndices <- (sampleIndices * 40) + 1
+news <- news[sampleIndices]
+sampleIndices <- 1:(length(blogs) / 600)
+sampleIndices <- (sampleIndices * 600) + 1
+blogs <- blogs[sampleIndices]
+twitterSample <- VCorpus(VectorSource(twitter))
+newsSample <- VCorpus(VectorSource(news))
+blogSample <- VCorpus(VectorSource(blogs))
+combinedSample <- c(blogSample, newsSample, twitterSample)
+
+totalCount <- sum(nchar(combinedSample))
+
+combinedSample <- tm_map(combinedSample, removePunctuation)
+punctCount <- totalCount - sum(nchar(combinedSample))
+combinedSample <- tm_map(combinedSample, stripWhitespace)
+whiteSpaceCount <- totalCount - (punctCount + sum(nchar(combinedSample)))
+combinedSample <- tm_map(combinedSample, content_transformer(tolower))
+combinedSample <- tm_map(combinedSample, removeNumbers)
+numberCount <- totalCount - (punctCount + whiteSpaceCount + sum(nchar(combinedSample)))
+tdm <- TermDocumentMatrix(twitterSample)
+```
+
+```{r}
+ins <- inspect(tdm)
+FreqMat <- data.frame(apply(ins, 1, sum))
+rm(ins)
+FreqMat <- data.frame(ST = row.names(FreqMat), Freq = FreqMat[, 1])
+FreqMat <- FreqMat[order(FreqMat$Freq, decreasing = T), ]
+row.names(FreqMat) <- NULL
+totalWords <- sum(FreqMat$Freq)
+freqGroups <- aggregate(rep(1, nrow(FreqMat)), by=list(FreqMat$Freq), FUN=sum)
+names(freqGroups) <- c("Frequency", "UniqueWords")
+freqGroups$PercentOfWords <- freqGroups$UniqueWords * 100 / totalWords
+FreqMat$IsStopWord <- FreqMat$ST %in% stopwords()
+
+TrigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
+tdm <- TermDocumentMatrix(combinedSample, control = list(tokenize = TrigramTokenizer))
+
+addTermFrequencies <- function(tdm, freqMatrix, start, end){
+	ins <- inspect(tdm[start:end, ])
+	inc <- data.frame(apply(ins, 1, sum))
+	rm(ins)
+	inc <- data.frame(ST = row.names(inc), Freq = inc[, 1])
+	row.names(inc) <- NULL
+	rbind(freqMatrix, inc)
+}
+```
+
+```{r}
+ins <- inspect(tdm[1:10000, ])
+triGramFreqMat <- data.frame(apply(ins, 1, sum))
+rm(ins)
+triGramFreqMat <- data.frame(ST = row.names(triGramFreqMat), Freq = triGramFreqMat[, 1])
+row.names(triGramFreqMat) <- NULL
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 10001, 20000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 20001, 30000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 30001, 40000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 40001, 50000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 50001, 60000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 60001, 70000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 70001, 80000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 80001, 90000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 90001, 100000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 100001, 110000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 110001, 120000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 120001, 130000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 130001, 140000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 140001, 150000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 150001, 160000)
+triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 160001, 166087)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 170001, 180000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 180001, 190000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 190001, 200000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 200001, 210000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 210001, 220000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 220001, 230000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 230001, 240000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 240001, 250000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 250001, 260000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 260001, 270000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 270001, 280000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 280001, 290000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 290001, 300000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 300001, 310000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 310001, 320000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 320001, 321318)
+
+triGramFreqMat <- triGramFreqMat[order(triGramFreqMat$Freq, decreasing = T), ]
+
+totalGrams <- sum(triGramFreqMat$Freq)
+triGramFreqMat$Divider <- unlist(gregexpr(pattern = " ", as.character(triGramFreqMat$ST)))[(1:nrow(triGramFreqMat))*2]
+triGramFreqMat$Lead <- substr(triGramFreqMat$ST, 1, triGramFreqMat$Divider-1)
+sums <- aggregate(triGramFreqMat$Freq, by=list(triGramFreqMat$Lead), FUN=sum)
+names(sums) <- c("Lead", "LeadFreq")
+triGramFreqMat <- merge(triGramFreqMat, sums)
+triGramFreqMat$PredictRate <- triGramFreqMat$Freq/triGramFreqMat$LeadFreq
+triGramFreqMat <- triGramFreqMat[order(triGramFreqMat$Freq, decreasing = T), ]
+
+estPredAccuracy <- sum(triGramFreqMat$Freq * triGramFreqMat$PredictRate) / sum(triGramFreqMat$Freq)
+adjEstPredAccuracy <- sum(triGramFreqMat[triGramFreqMat$Freq > 10, "Freq"] * triGramFreqMat[triGramFreqMat$Freq > 10, "PredictRate"]) / sum(triGramFreqMat[triGramFreqMat$Freq > 10, "Freq"])
+
+# twitterSample <- tm_map(twitterSample, removeStopwords)
+# twitterSample <- tm_map(twitterSample, stemDocument)
+# 
+# tdm <- TermDocumentMatrix(twitterSample)
+# 
+# ins <- inspect(tdm)
+# stoppedFreqMat <- data.frame(apply(ins, 1, sum))
+# rm(ins)
+# stoppedFreqMat <- data.frame(ST = row.names(stoppedFreqMat), Freq = stoppedFreqMat[, 1])
+# stoppedFreqMat <- stoppedFreqMat[order(stoppedFreqMat$Freq, decreasing = T), ]
+# row.names(stoppedFreqMat) <- NULL
+# 
+# 
+# TrigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
+# tdm <- TermDocumentMatrix(twitterSample, control = list(tokenize = TrigramTokenizer))
+# 
+# addTermFrequencies <- function(tdm, freqMatrix, start, end){
+# 	ins <- inspect(tdm[start:end, ])
+# 	inc <- data.frame(apply(ins, 1, sum))
+# 	rm(ins)
+# 	inc <- data.frame(ST = row.names(inc), Freq = inc[, 1])
+# 	row.names(inc) <- NULL
+# 	rbind(freqMatrix, inc)
+# }
+# 
+# 
+# ins <- inspect(tdm[1:10000, ])
+# triGramFreqMat <- data.frame(apply(ins, 1, sum))
+# rm(ins)
+# triGramFreqMat <- data.frame(ST = row.names(triGramFreqMat), Freq = triGramFreqMat[, 1])
+# row.names(triGramFreqMat) <- NULL
+# 
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 10001, 20000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 20001, 30000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 30001, 40000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqM?at, 40001, 50000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 50001, 60000)
+# triGramFreqMat <- addTermFrequencies(tdm, triGramFreqMat, 60001, 63690)
+# 
+# triGramFreqMat <- triGramFreqMat[order(triGramFreqMat$Freq, decreasing = T), ]
+# 
+# totalGrams <- sum(triGramFreqMat$Freq)
+# triGramFreqMat$Divider <- unlist(gregexpr(pattern = " ", as.character(triGramFreqMat$ST)))[(1:nrow(triGramFreqMat))*2]
+# triGramFreqMat$Lead <- substr(triGramFreqMat$ST, 1, triGramFreqMat$Divider-1)
+# sums <- aggregate(triGramFreqMat$Freq, by=list(triGramFreqMat$Lead), FUN=sum)
+# names(sums) <- c("Lead", "LeadFreq")
+# triGramFreqMat <- merge(triGramFreqMat, sums)
+# triGramFreqMat$PredictRate <- triGramFreqMat$Freq/triGramFreqMat$LeadFreq
+# triGramFreqMat <- triGramFreqMat[order(triGramFreqMat$Freq, decreasing = T), ]
+
+
+
+```
+
+The entire corpus contains `r (blogEntries + newsArticles + tweets)` documents. Document character lengths are distributed according to the table below:
+
+```{r echo=FALSE}
+sources <- c("Blogs", "News", "Twitter")
+means <- c(meanEntryLength, meanArticleLength, meanTweetLength)
+mins <- c(minEntryLength, minArticleLength, minTweetLength)
+maxs <- c(maxEntryLength, maxArticleLength, maxTweetLength)
+sds <- c(sdEntryLength, sdArticleLength, sdTweetLength)
+stats <- data.frame(sources, means, mins, maxs, sds)
+names(stats) <- c("Source", "Mean Character Length", "Min Character Length", "Max Character Length", "Character Length Standard Deviation")
+stats
+```
+
+The tweets are much shorter than the other two types of documents, and there are a lot more high end outliers in articles and blogs. The most frequent words can be viewed in the word cloud below:
+
+```{r echo=FALSE}
+wordcloud(FreqMat[1:20, "ST"], FreqMat[1:20, "Freq"])
+```
+
+As seen in the table below, `r (sum(freqGroups[0:10, "PercentOfWords"]))`% of words show up in the corpus 10 times or less.
+
+```{r echo=FALSE}
+head(freqGroups, 10)
+```
+
+`r (sum(FreqMat[FreqMat$IsStopWord, "Freq"]) / totalWords)`% of word occurrences are considered to be common "stop words". `r (punctCount / totalCount)`% of characters are punctuation, and `r (numberCount / totalCount)`% of the characters are numbers, which will be removed for this project.
+
+## Word Sequences
+One approach to predicting the next word that will be typed is by observing how often a specific series of words occurs. The most frequent series of words based on the words inputted so far can then be used to make a suggestion.
+
+Basing your predictions on series of three words together has been suggested as a good balance between the size of the predictive model and the predictive power of the model. The most common three word series are shown below:
+
+```{r echo=FALSE}
+wordcloud(triGramFreqMat[1:20, "ST"], triGramFreqMat[1:20, "Freq"])
+```
+
+The three word series were then split into a two word input and a third word that is the predicted outcome. The series were then evaluated to determine how often the model would be accurate if the most likely third word was predicted as the next word to be typed.
+
+Based on the three word series model, the model would predict the correct third word `r estPredAccuracy`% of the time. However, if we remove the series that only show up in the sample 10 times of fewer (possibly biased results) the accuracy drops to `r adjEstPredAccuracy`.
+
+The most frequent word series are shown below, along with their accurate prediction rate.
+
+```{r echo=FALSE}
+names(triGramFreqMat) <- c("Prediction Input", "Word Series", "Frequency", "Divider", "Frequency of Input", "Accuracy Rate")
+head(triGramFreqMat[, c("Word Series", "Frequency", "Prediction Input", "Frequency of Input", "Accuracy Rate")], 10)
+```
+
+## Prediction Approach
+Based on the observations above, a prediction algorithm is possible using word sequence probabilities. It will be necessary to balance the number and length of sequences with the accuracy of the model to minimize the size of the application while still giving helpful predictions. Further research is needed to establish the ideal length of the word series to keep the memory requirements of the model small while still being accurate enough to be useful.
+
+Some additional considerations that will be factored in to see if they're helpful include:
+
+* Account for punctuation - does punctuation change the pattern of the series of words if the punctuation appears in the middle of the series? Should those series be removed from the model and replaced? Can general start of sentence models be used when an end of sentence is detected instead of the standard series of words?
+* Casing - the model currently treats all words as lower case, even though we know that this is not accurate in real use. This was done to help generalize the word series. After a prediction is made, it will be necessary to consider whether the casing of the prediction needs to be altered before being presented to the user.
+* Cache matrix/personalization - there will be words that haven't seen before. A new document may address a subject that wasn't represented in the sample corpus, or may use proper names that are very unique to the individual. To increase the predictive power of the model, a cache of the text that has been entered by the user so far should be considered to build a more personalized model.
+* Stemming - it may be possible to get a more general model that is more accurate by "stemming" the words before building the word series. Stemming refers to the process of reducing the word to it's stem, such as representing be, being, and been all as the word be.
+* Stop word removal - stop words refer to common words that are part of the repetitive structure of the English language. It may be possible to improve the model results by stripping out the stop words to find series of uncommon words and asses whether those patterns can improve the model if used in conjunction with the basic model.
